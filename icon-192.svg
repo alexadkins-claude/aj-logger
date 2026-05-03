@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" fill="#1A1410"/>
+  <rect x="0" y="188" width="192" height="4" fill="#8B6914"/>
+  <text x="96" y="115" font-family="Georgia, serif" font-size="72" font-weight="bold" fill="#8B6914" text-anchor="middle" dominant-baseline="middle">AJ</text>
+  <rect x="20" y="140" width="152" height="2" fill="#8B6914" opacity="0.4"/>
+  <text x="96" y="162" font-family="monospace" font-size="14" fill="#C49A2A" text-anchor="middle" letter-spacing="4">LOGGER</text>
+</svg>

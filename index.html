@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AJ Log">
+<meta name="theme-color" content="#1A1410">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.svg">
+<title>AJ Quick Log</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<!-- QR Code library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<style>
+:root {
+  --oak: #8B6914;
+  --oak-light: #C49A2A;
+  --oak-pale: #F5EDD6;
+  --ink: #1A1410;
+  --ink-mid: #3D2F1E;
+  --ink-soft: #6B5740;
+  --grain: #EDE4D0;
+  --cream: #FAF6EE;
+  --white: #FFFFFF;
+  --red: #C0392B;
+  --red-bg: #FDF0EE;
+  --amber: #D68910;
+  --amber-bg: #FDF8ED;
+  --green: #1E8449;
+  --green-bg: #F0FAF2;
+  --border: rgba(139,105,20,0.2);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bot: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+  color: var(--ink);
+  max-width: 480px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── HEADER ── */
+.header {
+  background: var(--ink);
+  padding: calc(var(--safe-top) + 12px) 20px 12px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 50;
+}
+
+.header-row { display: flex; align-items: center; justify-content: space-between; }
+
+.brand { display: flex; align-items: center; gap: 10px; }
+
+.brand-mark {
+  width: 34px; height: 34px;
+  border: 1.5px solid var(--oak);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Serif Display', serif;
+  font-size: 14px; color: var(--oak);
+}
+
+.brand-name { font-family: 'DM Serif Display', serif; font-size: 15px; color: var(--white); line-height: 1; }
+.brand-sub { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--oak-light); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 2px; }
+
+.header-right { display: flex; align-items: center; gap: 10px; }
+.live-time { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--oak-light); }
+
+.install-btn {
+  background: var(--oak);
+  border: none;
+  color: white;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  padding: 5px 10px;
+  cursor: pointer;
+  display: none;
+  text-transform: uppercase;
+}
+
+.gold-rule { height: 2px; background: linear-gradient(90deg, var(--oak), var(--oak-light), var(--oak)); flex-shrink: 0; }
+
+/* ── BODY / SCROLL ── */
+.app-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(var(--safe-bot) + 70px);
+}
+
+/* ── SCREENS ── */
+.screen { display: none; padding: 20px; }
+.screen.active { display: block; }
+
+/* ── STEP DOTS ── */
+.step-dots { display: flex; justify-content: center; gap: 7px; margin: 4px 0 20px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); transition: all 0.2s; }
+.dot.active { background: var(--oak); transform: scale(1.4); }
+.dot.done { background: var(--oak-light); }
+
+/* ── TYPOGRAPHY ── */
+.screen-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--ink); margin-bottom: 4px; line-height: 1.2; }
+.screen-sub { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink-soft); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 20px; }
+.section-label {
+  font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--oak); margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ── TRAFFIC LIGHTS ── */
+.traffic-grid { display: flex; flex-direction: column; gap: 10px; }
+
+.traffic-btn {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 18px;
+  border: 2px solid var(--border);
+  background: var(--white);
+  cursor: pointer; transition: all 0.15s;
+  text-align: left; width: 100%;
+  position: relative; overflow: hidden;
+}
+
+.traffic-btn::before {
+  content: ''; position: absolute;
+  left: 0; top: 0; bottom: 0; width: 4px;
+  transition: width 0.15s;
+}
+
+.traffic-btn.red::before { background: var(--red); }
+.traffic-btn.amber::before { background: var(--amber); }
+.traffic-btn.green::before { background: var(--green); }
+
+.traffic-btn.red:active { background: var(--red-bg); border-color: var(--red); }
+.traffic-btn.amber:active { background: var(--amber-bg); border-color: var(--amber); }
+.traffic-btn.green:active { background: var(--green-bg); border-color: var(--green); }
+
+.tl-dot { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.red .tl-dot { background: var(--red); }
+.amber .tl-dot { background: var(--amber); }
+.green .tl-dot { background: var(--green); }
+
+.tl-info { flex: 1; }
+.tl-title { font-weight: 600; font-size: 15px; color: var(--ink); margin-bottom: 1px; }
+.tl-desc { font-size: 12px; color: var(--ink-soft); line-height: 1.3; }
+.tl-arr { font-size: 20px; color: var(--border); }
+
+/* ── CATEGORIES ── */
+.cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+
+.cat-btn {
+  padding: 14px 10px; border: 1.5px solid var(--border);
+  background: var(--white); cursor: pointer; transition: all 0.12s; text-align: center;
+}
+
+.cat-icon { font-size: 22px; margin-bottom: 5px; }
+.cat-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+
+.cat-btn.selected, .cat-btn:active { border-color: var(--oak); background: var(--oak-pale); }
+.cat-btn.selected .cat-label { color: var(--oak); }
+
+/* ── COLOUR CONTEXT BAR ── */
+.colour-bar {
+  padding: 10px 14px; margin-bottom: 14px;
+  font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+  display: none;
+}
+.colour-bar.show { display: block; }
+.colour-bar.red { background: var(--red-bg); color: var(--red); border-left: 3px solid var(--red); }
+.colour-bar.amber { background: var(--amber-bg); color: var(--amber); border-left: 3px solid var(--amber); }
+.colour-bar.green { background: var(--green-bg); color: var(--green); border-left: 3px solid var(--green); }
+
+/* ── NAME CHIPS ── */
+.name-scroll { max-height: 220px; overflow-y: auto; margin-bottom: 12px; }
+.name-grid { display: flex; flex-wrap: wrap; gap: 7px; padding: 2px; }
+
+.name-chip {
+  padding: 8px 13px; border: 1.5px solid var(--border);
+  background: var(--white); font-size: 13px; color: var(--ink-mid);
+  cursor: pointer; transition: all 0.1s; user-select: none;
+}
+
+.name-chip:active, .name-chip.selected { background: var(--oak); color: var(--white); border-color: var(--oak); }
+
+/* ── JOB SCANNER ── */
+.scan-area {
+  background: var(--ink);
+  border: 2px dashed var(--oak);
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.scan-icon { font-size: 32px; margin-bottom: 8px; }
+.scan-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--oak-light); }
+
+.job-ref-display {
+  background: var(--oak-pale); border: 1.5px solid var(--oak);
+  padding: 10px 14px; margin-bottom: 10px;
+  font-family: 'DM Mono', monospace; font-size: 14px; color: var(--ink);
+  display: none; justify-content: space-between; align-items: center;
+}
+
+.job-ref-display.show { display: flex; }
+.job-ref-clear { background: none; border: none; color: var(--ink-soft); font-size: 18px; cursor: pointer; }
+
+#scannerVideo {
+  width: 100%; max-height: 200px; object-fit: cover;
+  display: none; background: #000;
+}
+
+#scannerVideo.active { display: block; }
+
+.or-line { text-align: center; font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.12em; color: var(--ink-soft); text-transform: uppercase; margin: 10px 0; }
+
+/* ── PHOTO CAPTURE ── */
+.photo-area { margin-bottom: 12px; }
+
+.photo-btn {
+  width: 100%; padding: 14px;
+  background: var(--ink); border: 1.5px solid var(--oak);
+  color: var(--white); font-family: 'DM Mono', monospace;
+  font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+  transition: all 0.15s; margin-bottom: 10px;
+}
+
+.photo-btn:hover { background: var(--oak); }
+
+.photo-preview-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+
+.photo-thumb {
+  position: relative; aspect-ratio: 1;
+  overflow: hidden; background: var(--grain);
+}
+
+.photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+.photo-remove {
+  position: absolute; top: 3px; right: 3px;
+  background: rgba(0,0,0,0.7); color: white;
+  border: none; width: 22px; height: 22px;
+  border-radius: 50%; font-size: 12px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ── NOTE ── */
+.note-field {
+  width: 100%; background: var(--white); border: 1.5px solid var(--border);
+  padding: 14px; font-family: 'DM Sans', sans-serif; font-size: 14px;
+  color: var(--ink); outline: none; resize: none; min-height: 110px;
+  line-height: 1.5; -webkit-appearance: none; border-radius: 0;
+  margin-bottom: 6px;
+}
+.note-field:focus { border-color: var(--oak); }
+
+.char-count { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink-soft); text-align: right; margin-bottom: 12px; }
+
+.skip-link {
+  display: block; text-align: center;
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-soft); text-decoration: underline;
+  cursor: pointer; margin-bottom: 14px;
+}
+
+/* ── BUTTONS ── */
+.btn-primary {
+  width: 100%; padding: 16px; background: var(--ink); color: var(--white);
+  border: none; font-family: 'DM Mono', monospace; font-size: 12px;
+  letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer;
+  transition: background 0.15s; margin-bottom: 10px;
+}
+.btn-primary:active { background: var(--oak); }
+
+.btn-back {
+  width: 100%; padding: 13px; background: none; color: var(--ink-soft);
+  border: 1px solid var(--border); font-family: 'DM Mono', monospace;
+  font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer;
+}
+
+/* ── LOG ENTRIES ── */
+.log-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+.log-counts { display: flex; gap: 8px; }
+.count-pill {
+  padding: 4px 10px; font-family: 'DM Mono', monospace; font-size: 10px;
+  letter-spacing: 0.08em; border: 1px solid var(--border);
+}
+.count-pill.red { border-color: var(--red); color: var(--red); background: var(--red-bg); }
+.count-pill.amber { border-color: var(--amber); color: var(--amber); background: var(--amber-bg); }
+.count-pill.green { border-color: var(--green); color: var(--green); background: var(--green-bg); }
+
+.entry-card {
+  background: var(--white); border: 1px solid var(--border);
+  margin-bottom: 10px; overflow: hidden;
+  animation: fadeUp 0.2s ease forwards; opacity: 0; transform: translateY(6px);
+}
+@keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+
+.entry-top {
+  padding: 12px 16px; display: flex; align-items: center; gap: 10px;
+}
+.entry-stripe { width: 4px; align-self: stretch; flex-shrink: 0; border-radius: 2px; }
+.entry-stripe.red { background: var(--red); }
+.entry-stripe.amber { background: var(--amber); }
+.entry-stripe.green { background: var(--green); }
+
+.entry-meta { flex: 1; min-width: 0; }
+.entry-title { font-weight: 600; font-size: 14px; color: var(--ink); }
+.entry-tags { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink-soft); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.entry-time { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink-soft); flex-shrink: 0; }
+
+.entry-note { padding: 8px 16px 12px 16px; font-size: 13px; color: var(--ink-mid); font-style: italic; line-height: 1.4; border-top: 1px solid var(--border); background: var(--cream); }
+
+.entry-photos { padding: 8px 16px; display: flex; gap: 6px; border-top: 1px solid var(--border); overflow-x: auto; }
+.entry-photo-thumb { width: 60px; height: 60px; flex-shrink: 0; object-fit: cover; }
+
+.entry-job { padding: 6px 16px; font-family: 'DM Mono', monospace; font-size: 10px; color: var(--oak); background: var(--oak-pale); border-top: 1px solid var(--border); letter-spacing: 0.1em; }
+
+.empty-state { text-align: center; padding: 48px 20px; }
+.empty-icon { font-size: 40px; margin-bottom: 12px; }
+.empty-msg { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); }
+
+/* ── EXPORT ── */
+.export-card { border: 1px solid var(--border); background: var(--white); margin-top: 20px; }
+.export-head { background: var(--ink); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
+.export-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--oak-light); }
+.copy-btn { background: none; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); padding: 4px 10px; font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; }
+.copy-btn:active { border-color: var(--oak-light); color: var(--oak-light); }
+.export-body { padding: 14px 16px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.8; color: var(--ink-mid); white-space: pre-wrap; }
+
+/* ── QR SCREEN ── */
+.qr-wrap { text-align: center; padding: 10px 0; }
+#qrcode { display: inline-block; padding: 16px; background: white; margin-bottom: 16px; }
+.qr-note { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); line-height: 1.8; margin-bottom: 20px; }
+
+.install-card { background: var(--ink); padding: 20px; margin-bottom: 14px; border-left: 3px solid var(--oak); }
+.install-title { font-family: 'DM Serif Display', serif; font-size: 16px; color: var(--white); margin-bottom: 8px; }
+.install-steps { list-style: none; }
+.install-steps li { font-family: 'DM Mono', monospace; font-size: 11px; color: rgba(255,255,255,0.7); line-height: 2; letter-spacing: 0.05em; }
+.install-steps li::before { content: '→ '; color: var(--oak-light); }
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px;
+  background: var(--ink); border-top: 2px solid var(--oak);
+  display: flex; z-index: 100;
+  padding-bottom: var(--safe-bot);
+}
+
+.nav-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 10px 8px 10px; cursor: pointer; border: none; background: none; transition: all 0.15s;
+}
+
+.nav-icon { font-size: 20px; }
+.nav-label { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.35); transition: color 0.15s; }
+.nav-btn.active .nav-label { color: var(--oak-light); }
+.nav-btn.active .nav-icon { filter: drop-shadow(0 0 4px rgba(196,154,42,0.5)); }
+
+/* ── INPUTS ── */
+input[type="text"] {
+  width: 100%; background: var(--white); border: 1.5px solid var(--border);
+  padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 14px;
+  color: var(--ink); outline: none; border-radius: 0; -webkit-appearance: none;
+  transition: border-color 0.15s;
+}
+input[type="text"]:focus { border-color: var(--oak); }
+input[type="file"] { display: none; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-row">
+    <div class="brand">
+      <div class="brand-mark">AJ</div>
+      <div>
+        <div class="brand-name">Adams Joinery</div>
+        <div class="brand-sub">Quick Log</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="live-time" id="liveTime"></div>
+      <button class="install-btn" id="installBtn" onclick="installApp()">+ Add to Home</button>
+    </div>
+  </div>
+</div>
+<div class="gold-rule"></div>
+
+<!-- Scrollable body -->
+<div class="app-body">
+
+  <!-- ══ SCREEN: NEW LOG ══ -->
+  <div class="screen active" id="screen-new">
+
+    <!-- Step 1: Severity -->
+    <div id="step-1">
+      <br>
+      <div class="step-dots">
+        <div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      </div>
+      <div class="screen-title">How serious is it?</div>
+      <div class="screen-sub">One tap to start</div>
+
+      <div class="traffic-grid">
+        <button class="traffic-btn red" onclick="selectColour('red')">
+          <div class="tl-dot">🔴</div>
+          <div class="tl-info">
+            <div class="tl-title">Red — Serious</div>
+            <div class="tl-desc">Fault, safety issue, conflict, job at risk</div>
+          </div>
+          <div class="tl-arr">›</div>
+        </button>
+        <button class="traffic-btn amber" onclick="selectColour('amber')">
+          <div class="tl-dot">🟡</div>
+          <div class="tl-info">
+            <div class="tl-title">Amber — Concern</div>
+            <div class="tl-desc">Attitude, lateness, quality dip, watch this</div>
+          </div>
+          <div class="tl-arr">›</div>
+        </button>
+        <button class="traffic-btn green" onclick="selectColour('green')">
+          <div class="tl-dot">🟢</div>
+          <div class="tl-info">
+            <div class="tl-title">Green — Positive</div>
+            <div class="tl-desc">Good work, effort above and beyond</div>
+          </div>
+          <div class="tl-arr">›</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 2: Category -->
+    <div id="step-2" style="display:none">
+      <br>
+      <div class="step-dots">
+        <div class="dot done"></div><div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      </div>
+      <div class="colour-bar" id="colourBar"></div>
+      <div class="screen-title">What category?</div>
+      <div class="screen-sub">Tap the best fit</div>
+      <div class="cat-grid">
+        <button class="cat-btn" onclick="selectCat('Quality / Fault','🔧')"><div class="cat-icon">🔧</div><div class="cat-label">Quality / Fault</div></button>
+        <button class="cat-btn" onclick="selectCat('Attitude','😤')"><div class="cat-icon">😤</div><div class="cat-label">Attitude</div></button>
+        <button class="cat-btn" onclick="selectCat('Attendance','📅')"><div class="cat-icon">📅</div><div class="cat-label">Attendance</div></button>
+        <button class="cat-btn" onclick="selectCat('Safety','⚠️')"><div class="cat-icon">⚠️</div><div class="cat-label">Safety</div></button>
+        <button class="cat-btn" onclick="selectCat('Performance','📉')"><div class="cat-icon">📉</div><div class="cat-label">Performance</div></button>
+        <button class="cat-btn" onclick="selectCat('Conflict','🤝')"><div class="cat-icon">🤝</div><div class="cat-label">Conflict</div></button>
+        <button class="cat-btn" onclick="selectCat('Production','🗂')"><div class="cat-icon">🗂</div><div class="cat-label">Production</div></button>
+        <button class="cat-btn" onclick="selectCat('Positive','⭐')"><div class="cat-icon">⭐</div><div class="cat-label">Positive</div></button>
+      </div>
+      <button class="btn-back" onclick="goStep(1)">← Back</button>
+    </div>
+
+    <!-- Step 3: Name -->
+    <div id="step-3" style="display:none">
+      <br>
+      <div class="step-dots">
+        <div class="dot done"></div><div class="dot done"></div><div class="dot active"></div><div class="dot"></div><div class="dot"></div>
+      </div>
+      <div class="screen-title">Who's involved?</div>
+      <div class="screen-sub">Tap names — select all that apply</div>
+
+      <div class="name-scroll">
+        <div class="name-grid" id="nameGrid"></div>
+      </div>
+
+      <div style="margin: 10px 0 4px">
+        <input type="text" id="customName" placeholder="Or type a name not listed...">
+      </div>
+
+      <br>
+      <button class="btn-primary" onclick="goStep(4)">Next →</button>
+      <button class="btn-back" onclick="goStep(2)">← Back</button>
+    </div>
+
+    <!-- Step 4: Job Reference -->
+    <div id="step-4" style="display:none">
+      <br>
+      <div class="step-dots">
+        <div class="dot done"></div><div class="dot done"></div><div class="dot done"></div><div class="dot active"></div><div class="dot"></div>
+      </div>
+      <div class="screen-title">Job reference?</div>
+      <div class="screen-sub">Optional — scan or type</div>
+
+      <div class="job-ref-display" id="jobRefDisplay">
+        <span id="jobRefText"></span>
+        <button class="job-ref-clear" onclick="clearJobRef()">×</button>
+      </div>
+
+      <video id="scannerVideo" playsinline autoplay muted></video>
+
+      <div class="scan-area" id="scanArea" onclick="toggleScanner()">
+        <div class="scan-icon">📷</div>
+        <div class="scan-label">Tap to scan job docket barcode / QR</div>
+      </div>
+
+      <div class="or-line">or type manually</div>
+      <input type="text" id="jobRefInput" placeholder="Job number / reference..." style="margin-bottom: 14px;" oninput="setJobRef(this.value)">
+
+      <button class="btn-primary" onclick="goStep(5)">Next →</button>
+      <button class="btn-back" onclick="goStep(3)">← Back</button>
+    </div>
+
+    <!-- Step 5: Photo + Note -->
+    <div id="step-5" style="display:none">
+      <br>
+      <div class="step-dots">
+        <div class="dot done"></div><div class="dot done"></div><div class="dot done"></div><div class="dot done"></div><div class="dot active"></div>
+      </div>
+
+      <div class="section-label" style="margin-bottom:12px">Photo Evidence</div>
+
+      <div class="photo-area">
+        <button class="photo-btn" onclick="document.getElementById('photoInput').click()">
+          📸 <span>Add Photo(s)</span>
+        </button>
+        <input type="file" id="photoInput" accept="image/*" capture="environment" multiple onchange="addPhotos(event)">
+        <div class="photo-preview-grid" id="photoGrid"></div>
+      </div>
+
+      <div class="section-label" style="margin-top:16px; margin-bottom:12px">Note</div>
+
+      <textarea class="note-field" id="noteField" placeholder="Brief note — one or two sentences is plenty..." maxlength="280" oninput="updateChar()"></textarea>
+      <div class="char-count" id="charCount">0 / 280</div>
+
+      <span class="skip-link" onclick="submitEntry(true)">Skip note — log it now</span>
+
+      <button class="btn-primary" onclick="submitEntry(false)">✓ Log It</button>
+      <button class="btn-back" onclick="goStep(4)">← Back</button>
+    </div>
+
+  </div>
+
+  <!-- ══ SCREEN: TODAY'S LOG ══ -->
+  <div class="screen" id="screen-log">
+    <br>
+    <div class="log-top">
+      <div class="screen-title">Today's Log</div>
+      <div class="log-counts" id="logCounts"></div>
+    </div>
+    <div id="logList"></div>
+    <div id="exportCard" style="display:none">
+      <div class="export-card">
+        <div class="export-head">
+          <div class="export-label">End of Day Summary → Copy to Claude</div>
+          <button class="copy-btn" onclick="copyExport()">Copy</button>
+        </div>
+        <div class="export-body" id="exportBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SCREEN: QR & INSTALL ══ -->
+  <div class="screen" id="screen-qr">
+    <br>
+    <div class="screen-title">Workshop Access</div>
+    <div class="screen-sub">Print, install, go</div>
+
+    <div class="section-label">QR Code for Workshop Wall</div>
+    <div class="qr-wrap">
+      <div id="qrcode"></div>
+      <div class="qr-note">
+        Print this and stick it in the workshop.<br>
+        Any phone scans it → opens this app instantly.<br>
+        No login. No download. Just scan and log.
+      </div>
+    </div>
+
+    <div class="section-label">Add to Your Home Screen</div>
+    <div class="install-card">
+      <div class="install-title">iPhone / Safari</div>
+      <ul class="install-steps">
+        <li>Open this page in Safari</li>
+        <li>Tap the Share button (box with arrow)</li>
+        <li>Scroll down and tap "Add to Home Screen"</li>
+        <li>Tap Add — done. One tap from your home screen.</li>
+      </ul>
+    </div>
+    <div class="install-card">
+      <div class="install-title">Android / Chrome</div>
+      <ul class="install-steps">
+        <li>Open in Chrome</li>
+        <li>Tap the three-dot menu (top right)</li>
+        <li>Tap "Add to Home screen" or "Install app"</li>
+        <li>Confirm — appears instantly on home screen.</li>
+      </ul>
+    </div>
+
+    <div class="section-label" style="margin-top:16px">Share this URL</div>
+    <div style="background: var(--white); border: 1px solid var(--border); padding: 14px 16px; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom: 16px;">
+      <div id="currentUrl" style="font-family: 'DM Mono', monospace; font-size: 11px; color: var(--ink-soft); word-break: break-all; flex:1;"></div>
+      <button class="copy-btn" style="background: var(--ink); flex-shrink:0;" onclick="copyUrl()">Copy URL</button>
+    </div>
+  </div>
+
+</div><!-- end app-body -->
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <button class="nav-btn active" id="nav-new" onclick="switchTab('new')">
+    <span class="nav-icon">✏️</span>
+    <span class="nav-label">Log</span>
+  </button>
+  <button class="nav-btn" id="nav-log" onclick="switchTab('log')">
+    <span class="nav-icon">📋</span>
+    <span class="nav-label">Today</span>
+  </button>
+  <button class="nav-btn" id="nav-qr" onclick="switchTab('qr')">
+    <span class="nav-icon">📲</span>
+    <span class="nav-label">Install</span>
+  </button>
+</div>
+
+<!-- ════════ SCRIPTS ════════ -->
+<script>
+// ── Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+// ── PWA Install
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('installBtn').style.display = 'block';
+});
+
+function installApp() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => {
+      deferredPrompt = null;
+      document.getElementById('installBtn').style.display = 'none';
+    });
+  }
+}
+
+// ── Live time
+function tick() {
+  const n = new Date();
+  document.getElementById('liveTime').textContent =
+    n.getHours().toString().padStart(2,'0') + ':' +
+    n.getMinutes().toString().padStart(2,'0');
+}
+tick(); setInterval(tick, 10000);
+
+// ── Staff list
+const STAFF = [
+  'Aiden Taylor','Ashley Hume','Ashley Mason','Callum Weald',
+  'Charlie Oliver','Charlie Taylor-Prior','Christian Axell',
+  'Daniel Carder','Ethan Chinnery-Walker','Harry Day',
+  'Ian Dove','Jack Mayot','James Miller','Jason Whitford',
+  'Jeff Butler','Joshua Brazil','Luke Glyde','Mark Inseal',
+  'Paul Jones','Paul Smith','Paul Styles','Robert Galsworthy',
+  'Ryan Sinclair','Ryan Taylor','Sam Sapford','Stephen East'
+];
+
+// ── State
+let colour = '', cat = '', catIcon = '';
+let names = [], photos = [], jobRef = '';
+let entries = JSON.parse(localStorage.getItem('aj_entries_today') || '[]');
+let scanStream = null;
+
+// Check if entries are from today
+const todayStr = new Date().toDateString();
+const savedDate = localStorage.getItem('aj_entries_date');
+if (savedDate !== todayStr) {
+  entries = [];
+  localStorage.setItem('aj_entries_date', todayStr);
+  localStorage.setItem('aj_entries_today', '[]');
+}
+
+// ── Build name chips
+function buildNames() {
+  const g = document.getElementById('nameGrid');
+  g.innerHTML = '';
+  STAFF.forEach(n => {
+    const c = document.createElement('div');
+    c.className = 'name-chip';
+    c.textContent = n;
+    c.onclick = () => {
+      c.classList.toggle('selected');
+      names = names.includes(n) ? names.filter(x => x !== n) : [...names, n];
+    };
+    g.appendChild(c);
+  });
+}
+buildNames();
+
+// ── Steps
+function goStep(n) {
+  for (let i = 1; i <= 5; i++) {
+    const el = document.getElementById('step-'+i);
+    if (el) el.style.display = i === n ? 'block' : 'none';
+  }
+  document.querySelector('.app-body').scrollTop = 0;
+  if (n !== 4) stopScanner();
+}
+
+// ── Colour select
+const ctxMsg = {
+  red: '🔴 RED — Serious. Will be flagged as priority.',
+  amber: '🟡 AMBER — Concern to watch and monitor.',
+  green: '🟢 GREEN — Positive note. Worth recording.'
+};
+
+function selectColour(c) {
+  colour = c;
+  const bar = document.getElementById('colourBar');
+  bar.textContent = ctxMsg[c];
+  bar.className = `colour-bar ${c} show`;
+  goStep(2);
+}
+
+// ── Category select
+function selectCat(c, icon) {
+  cat = c; catIcon = icon;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  setTimeout(() => goStep(3), 120);
+}
+
+// ── Job ref
+function setJobRef(val) { jobRef = val; }
+function clearJobRef() {
+  jobRef = '';
+  document.getElementById('jobRefInput').value = '';
+  document.getElementById('jobRefDisplay').classList.remove('show');
+}
+
+function showJobRef(val) {
+  jobRef = val;
+  document.getElementById('jobRefText').textContent = '📋 ' + val;
+  document.getElementById('jobRefDisplay').classList.add('show');
+  document.getElementById('jobRefInput').value = val;
+}
+
+// ── Scanner
+function toggleScanner() {
+  if (scanStream) { stopScanner(); return; }
+  if (!navigator.mediaDevices) { alert('Camera not available on this device/browser.'); return; }
+  const video = document.getElementById('scannerVideo');
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    .then(stream => {
+      scanStream = stream;
+      video.srcObject = stream;
+      video.classList.add('active');
+      document.getElementById('scanArea').querySelector('.scan-label').textContent = 'Tap to stop camera';
+      // Simple barcode attempt via BarcodeDetector
+      if ('BarcodeDetector' in window) {
+        const bd = new BarcodeDetector({ formats: ['qr_code','code_128','code_39','ean_13','ean_8'] });
+        const scanLoop = setInterval(async () => {
+          if (!scanStream) { clearInterval(scanLoop); return; }
+          try {
+            const codes = await bd.detect(video);
+            if (codes.length > 0) {
+              showJobRef(codes[0].rawValue);
+              stopScanner();
+              clearInterval(scanLoop);
+            }
+          } catch(e) {}
+        }, 500);
+      } else {
+        setTimeout(() => {
+          const ref = prompt('BarcodeDetector not supported on this browser.\nEnter job reference manually:');
+          if (ref) showJobRef(ref);
+          stopScanner();
+        }, 300);
+      }
+    })
+    .catch(() => alert('Camera permission denied. Please allow camera access in your browser settings.'));
+}
+
+function stopScanner() {
+  if (scanStream) {
+    scanStream.getTracks().forEach(t => t.stop());
+    scanStream = null;
+  }
+  const video = document.getElementById('scannerVideo');
+  video.classList.remove('active');
+  const lbl = document.getElementById('scanArea');
+  if (lbl) lbl.querySelector('.scan-label').textContent = 'Tap to scan job docket barcode / QR';
+}
+
+// ── Photos
+function addPhotos(e) {
+  const files = Array.from(e.target.files);
+  files.forEach(f => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      photos.push(ev.target.result);
+      renderPhotoGrid();
+    };
+    reader.readAsDataURL(f);
+  });
+  e.target.value = '';
+}
+
+function renderPhotoGrid() {
+  const g = document.getElementById('photoGrid');
+  g.innerHTML = '';
+  photos.forEach((src, i) => {
+    const d = document.createElement('div');
+    d.className = 'photo-thumb';
+    d.innerHTML = `<img src="${src}"><button class="photo-remove" onclick="removePhoto(${i})">×</button>`;
+    g.appendChild(d);
+  });
+}
+
+function removePhoto(i) {
+  photos.splice(i, 1);
+  renderPhotoGrid();
+}
+
+// ── Char count
+function updateChar() {
+  const len = document.getElementById('noteField').value.length;
+  document.getElementById('charCount').textContent = len + ' / 280';
+}
+
+// ── Submit
+function submitEntry(skipNote) {
+  const custom = document.getElementById('customName').value.trim();
+  const allNames = [...names, ...(custom ? [custom] : [])];
+  const note = skipNote ? '' : document.getElementById('noteField').value.trim();
+  const now = new Date();
+  const time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+
+  entries.push({ colour, cat, catIcon, names: allNames, note, photos: [...photos], jobRef, time });
+  localStorage.setItem('aj_entries_today', JSON.stringify(entries));
+
+  // Reset
+  colour = ''; cat = ''; catIcon = ''; names = []; photos = []; jobRef = '';
+  document.getElementById('customName').value = '';
+  document.getElementById('noteField').value = '';
+  document.getElementById('charCount').textContent = '0 / 280';
+  document.getElementById('jobRefInput').value = '';
+  document.getElementById('jobRefDisplay').classList.remove('show');
+  document.getElementById('photoGrid').innerHTML = '';
+  document.querySelectorAll('.name-chip').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('colourBar').className = 'colour-bar';
+  goStep(1);
+  switchTab('log');
+}
+
+// ── Render log
+function renderLog() {
+  const list = document.getElementById('logList');
+  const counts = document.getElementById('logCounts');
+  const exportCard = document.getElementById('exportCard');
+
+  if (!entries.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-msg">Nothing logged yet today</div></div>`;
+    counts.innerHTML = '';
+    exportCard.style.display = 'none';
+    return;
+  }
+
+  const r = entries.filter(e => e.colour === 'red').length;
+  const a = entries.filter(e => e.colour === 'amber').length;
+  const g = entries.filter(e => e.colour === 'green').length;
+  counts.innerHTML = [
+    r ? `<div class="count-pill red">🔴 ${r}</div>` : '',
+    a ? `<div class="count-pill amber">🟡 ${a}</div>` : '',
+    g ? `<div class="count-pill green">🟢 ${g}</div>` : ''
+  ].join('');
+
+  list.innerHTML = '';
+  [...entries].reverse().forEach(e => {
+    const card = document.createElement('div');
+    card.className = 'entry-card';
+    const nameStr = e.names.length ? e.names.join(', ') : 'No name';
+    let html = `
+      <div class="entry-top">
+        <div class="entry-stripe ${e.colour}"></div>
+        <div class="entry-meta">
+          <div class="entry-title">${e.catIcon} ${e.cat}</div>
+          <div class="entry-tags">${nameStr}</div>
+        </div>
+        <div class="entry-time">${e.time}</div>
+      </div>`;
+    if (e.jobRef) html += `<div class="entry-job">📋 Job: ${e.jobRef}</div>`;
+    if (e.note) html += `<div class="entry-note">"${e.note}"</div>`;
+    if (e.photos && e.photos.length) {
+      html += `<div class="entry-photos">${e.photos.map(p => `<img class="entry-photo-thumb" src="${p}">`).join('')}</div>`;
+    }
+    card.innerHTML = html;
+    list.appendChild(card);
+  });
+
+  // Build export text
+  const n = new Date();
+  const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  let out = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  out += `ADAMS JOINERY — END OF DAY LOG\n`;
+  out += `${DAYS[n.getDay()].toUpperCase()} ${n.getDate()} ${MONTHS[n.getMonth()].toUpperCase()} ${n.getFullYear()}\n`;
+  out += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  out += `${entries.length} item(s) logged — ${r} red · ${a} amber · ${g} green\n\n`;
+  entries.forEach(e => {
+    const nm = e.names.length ? e.names.join(', ') : 'No name';
+    out += `[${e.colour.toUpperCase()}] ${e.cat} — ${nm} (${e.time})`;
+    if (e.jobRef) out += ` · Job: ${e.jobRef}`;
+    out += '\n';
+    if (e.note) out += `  → ${e.note}\n`;
+    if (e.photos && e.photos.length) out += `  📸 ${e.photos.length} photo(s) attached\n`;
+    out += '\n';
+  });
+  out += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  out += `Please review today's log entries. Flag any patterns, advise on anything needing follow-up tomorrow, and note what I should carry into tomorrow's morning check-in.`;
+
+  document.getElementById('exportBody').textContent = out;
+  exportCard.style.display = 'block';
+}
+
+// ── Copy
+function copyExport() {
+  navigator.clipboard.writeText(document.getElementById('exportBody').textContent).then(() => {
+    const b = document.querySelector('#exportCard .copy-btn');
+    b.textContent = 'Copied ✓';
+    setTimeout(() => b.textContent = 'Copy', 2000);
+  });
+}
+
+function copyUrl() {
+  navigator.clipboard.writeText(window.location.href).then(() => {
+    const b = document.querySelector('#screen-qr .copy-btn');
+    b.textContent = 'Copied ✓';
+    setTimeout(() => b.textContent = 'Copy URL', 2000);
+  });
+}
+
+// ── QR Code
+function buildQR() {
+  const url = window.location.href;
+  document.getElementById('currentUrl').textContent = url;
+  document.getElementById('qrcode').innerHTML = '';
+  try {
+    new QRCode(document.getElementById('qrcode'), {
+      text: url,
+      width: 220,
+      height: 220,
+      colorDark: '#1A1410',
+      colorLight: '#FFFFFF',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  } catch(e) {}
+}
+
+// ── Tab switching
+function switchTab(tab) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-'+tab).classList.add('active');
+  document.getElementById('nav-'+tab).classList.add('active');
+  document.querySelector('.app-body').scrollTop = 0;
+  if (tab === 'log') renderLog();
+  if (tab === 'qr') buildQR();
+  if (tab !== 'new') stopScanner();
+}
+</script>
+</body>
+</html>
